@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server"
-import axios from "axios"
 import prisma from "@/lib/prisma"
+import axios from "axios"
+import { NextResponse } from "next/server"
 
 interface Listing {
   id: string
@@ -12,7 +12,7 @@ interface Listing {
 }
 
 // URL của FPT service (port 8001)
-const FPT_SERVICE_URL = "http://localhost:8001"
+const FPT_SERVICE_URL = process.env.BACKEND_ORIGIN || "http://localhost:8001"
 
 // 🆕 Gọi Qwen 2.5 32B qua FPT service
 async function callQwen(userMessage: string, systemPrompt?: string) {

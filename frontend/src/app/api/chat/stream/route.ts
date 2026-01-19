@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const PYTHON_BACKEND = process.env.PYTHON_BACKEND_URL || "http://localhost:8001";
+const PYTHON_BACKEND = process.env.BACKEND_ORIGIN || "http://localhost:8001";
 
 export async function POST(req: Request) {
   try {
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         try {
           while (true) {
             const { done, value } = await reader.read();
-            
+
             if (done) {
               console.log("✅ Stream complete");
               controller.close();
@@ -75,9 +75,9 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("❌ Streaming error:", error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: "Streaming failed",
         reply: "⚠️ Không thể kết nối streaming. Hệ thống sẽ chuyển sang chế độ thường.",
         ui_type: "none"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const PYTHON_BACKEND = process.env.PYTHON_BACKEND_URL || "http://localhost:8001";
+const PYTHON_BACKEND = process.env.BACKEND_ORIGIN || "http://localhost:8001";
 
 export async function POST(req: Request) {
   try {
@@ -14,13 +14,13 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         messages: [{ role: "user", content: message }],
         // Context đặc biệt để báo hiệu cho MasterController chỉ trích xuất thông tin
-        context: { is_analysis_only: true }, 
+        context: { is_analysis_only: true },
         temperature: 0.1
       }),
     });
 
     if (!res.ok) throw new Error("Backend error");
-    
+
     const data = await res.json();
     console.log("🔍 Analyze Result:", JSON.stringify(data.context, null, 2));
     // Python trả về format { reply, context: { ...extracted_info... } }

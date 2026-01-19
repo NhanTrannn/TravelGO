@@ -50,7 +50,7 @@ const PROVINCE_METADATA = {
 } as const
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800'
-const PYTHON_BACKEND = process.env.PYTHON_BACKEND_URL || process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8001'
+const PYTHON_BACKEND = process.env.BACKEND_ORIGIN || 'http://localhost:8001'
 
 // Types
 type FeaturedProvince = {
@@ -93,7 +93,7 @@ export async function GET(req: Request) {
         cache: 'no-store',
         signal: AbortSignal.timeout(5000)
       })
-      
+
       if (!response.ok) {
         throw new Error(`Backend Error: ${response.statusText}`)
       }
@@ -101,7 +101,7 @@ export async function GET(req: Request) {
 
     const data = await response.json()
     const provinces = Array.isArray(data?.provinces) ? (data.provinces as FeaturedProvince[]) : []
-    
+
     // Map dữ liệu & Enrich metadata
     const destinations = provinces.map((province: FeaturedProvince) => {
       const meta = PROVINCE_METADATA[province?.province_id as keyof typeof PROVINCE_METADATA]
@@ -129,7 +129,7 @@ export async function GET(req: Request) {
 
   } catch (error) {
     console.error('[GET] Destinations Error:', error)
-    
+
     // Fallback tĩnh (Static Data)
     const fallbackDestinations = Object.entries(PROVINCE_METADATA).slice(0, 9).map(([id, data]) => ({
       id,
@@ -177,7 +177,7 @@ export async function POST(req: Request) {
 
     const data = await res.json()
     const rawList = Array.isArray(data?.destinations) ? (data.destinations as RecommendationItem[]) : []
-    
+
     const destinations = rawList.map((item: RecommendationItem) => ({
       id: item?.id || 'unknown',
       type: 'spot', // AI thường trả về cả spot lẫn province, nhưng tạm để spot hoặc check logic

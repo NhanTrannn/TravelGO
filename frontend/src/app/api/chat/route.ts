@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // Cấu hình URL của Python Backend - Plan-RAG Service
-const PYTHON_BACKEND = process.env.PYTHON_BACKEND_URL || "http://localhost:8001";
+const PYTHON_BACKEND = process.env.BACKEND_ORIGIN || "http://localhost:8001";
 
 export async function POST(req: Request) {
   try {
@@ -19,10 +19,10 @@ export async function POST(req: Request) {
 
     // 3. Gọi sang Python Backend (Saola/Qwen)
     console.log("🔄 Forwarding chat to Python:", `${PYTHON_BACKEND}/chat`);
-    
+
     const controller = new AbortController();
     // Set timeout 60s cho AI suy nghĩ + Web Search (có thể lâu)
-    const timeoutId = setTimeout(() => controller.abort(), 60000); 
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     const res = await fetch(`${PYTHON_BACKEND}/chat`, {
       method: "POST",
@@ -57,9 +57,9 @@ export async function POST(req: Request) {
     // Xử lý timeout cụ thể
     if (error.name === 'AbortError') {
       return NextResponse.json(
-        { 
-          reply: "AI đang suy nghĩ hơi lâu, bạn thử hỏi lại ngắn gọn hơn nhé! 😅", 
-          ui_type: "none" 
+        {
+          reply: "AI đang suy nghĩ hơi lâu, bạn thử hỏi lại ngắn gọn hơn nhé! 😅",
+          ui_type: "none"
         },
         { status: 504 } // Gateway Timeout
       );
@@ -68,9 +68,9 @@ export async function POST(req: Request) {
     // Xử lý lỗi kết nối (Python chưa chạy)
     if (error.cause?.code === 'ECONNREFUSED') {
       return NextResponse.json(
-        { 
-          reply: "⚠️ Hệ thống AI chưa được bật. Vui lòng chạy Python Backend (port 8001).", 
-          ui_type: "none" 
+        {
+          reply: "⚠️ Hệ thống AI chưa được bật. Vui lòng chạy Python Backend (port 8001).",
+          ui_type: "none"
         },
         { status: 503 } // Service Unavailable
       );
