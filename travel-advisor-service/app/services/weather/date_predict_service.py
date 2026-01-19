@@ -186,6 +186,8 @@ CLIMATE_ZONES = {
         "Đồng Tháp",
         "An Giang",
         "Kiên Giang",
+        "Phú Quốc",  # Island in Kiên Giang
+        "Phu Quoc",  # Non-diacritic version
         "Hậu Giang",
         "Sóc Trăng",
         "Bạc Liêu",
