@@ -17,7 +17,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application
 COPY ./app ./app
 
-# Create data directory
+# Copy data files (CSV, JSON for weather/geography)
+COPY ./data ./data
+
+# Create data directory for ChromaDB
 RUN mkdir -p /data/chroma
 
 # Expose port
