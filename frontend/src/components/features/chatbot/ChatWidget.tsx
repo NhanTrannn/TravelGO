@@ -218,7 +218,13 @@ const clearSession = () => {
 
 const defaultGreeting: Message = {
   role: "assistant",
-  content: "Chào bạn! 👋 Tôi là trợ lý du lịch SaoLa AI. Tôi có thể giúp bạn lên lịch trình, tìm khách sạn và gợi ý điểm đến hấp dẫn. Bạn muốn đi đâu? ✈️",
+  content: `Chào bạn! 👋 Tôi là trợ lý du lịch SaoLa AI. Tôi có thể giúp bạn lên lịch trình, tìm khách sạn và gợi ý điểm đến hấp dẫn. Bạn muốn đi đâu? ✈️
+
+💡 **Ví dụ cách hỏi:**
+• "Lên lịch trình đi Đà Nẵng 3 ngày"
+• "Tìm khách sạn ở Phú Quốc giá rẻ"
+• "Gợi ý địa điểm du lịch Hà Nội"
+• "Du lịch Nha Trang 5 ngày 2 người ngân sách 10 triệu"`,
   ui_type: "none"
 };
 
