@@ -292,13 +292,13 @@ nano .env
 
 ```env
 # MongoDB Atlas
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/spots_db
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>
 
 # FPT AI LLM
-FPT_API_KEY=your_fpt_api_key
+FPT_API_KEY=<your_fpt_api_key>
 
 # OpenAI (optional fallback)
-OPENAI_API_KEY=your_openai_key
+OPENAI_API_KEY=<your_openai_key>
 
 # Server Config
 HOST=0.0.0.0
