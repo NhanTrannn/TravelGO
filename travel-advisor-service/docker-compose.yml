@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Travel Advisor Service
+  travel-advisor:
+    build: .
+    container_name: travel-advisor-service
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - FPT_API_KEY=${FPT_API_KEY}
+      - FPT_BASE_URL=${FPT_BASE_URL}
+      - FPT_MODEL_NAME=${FPT_MODEL_NAME}
+    volumes:
+      - ./app:/app/app
+      - chroma_data:/data/chroma
+    depends_on:
+      - mongodb
+      - chromadb
+    restart: unless-stopped
+    networks:
+      - travel-network
+
+  # MongoDB
+  mongodb:
+    image: mongo:7
+    container_name: travel-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    networks:
+      - travel-network
+
+  # ChromaDB
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: travel-chromadb
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+    networks:
+      - travel-network
+
+volumes:
+  mongo_data:
+  chroma_data:
+
+networks:
+  travel-network:
+    driver: bridge

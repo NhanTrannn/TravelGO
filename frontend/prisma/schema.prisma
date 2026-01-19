@@ -1,0 +1,263 @@
+// ============================================
+// PRISMA SCHEMA - TOUR WITH NLP
+// ============================================
+// Tổ chức schema theo modules:
+// 1. Configuration (Generator & Datasource)
+// 2. Authentication Module (User)
+// 3. Listing Module (Khách sạn, Tour)
+// 4. Booking Module (Đặt phòng)
+// ============================================
+
+// ============================================
+// 1. CONFIGURATION
+// ============================================
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 2. AUTHENTICATION MODULE
+// ============================================
+// User model: Quản lý tài khoản người dùng
+// - Hỗ trợ NextAuth.js authentication
+// - Lưu thông tin profile: name, email, image
+// - Quan hệ: 1 User -> N Listings (tạo), N Bookings (đặt)
+// ============================================
+model User {
+  id            String    @id @default(cuid())
+  name          String?   @db.NVarChar(200)
+  email         String?   @unique @db.NVarChar(200)
+  password      String?   @db.NVarChar(200)
+  emailVerified DateTime?
+  image         String?   @db.NVarChar(1000)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  listings      Listing[] @relation("UserListings")
+  bookings      Booking[] @relation("UserBookings")
+}
+
+// ============================================
+// 3. LISTING MODULE
+// ============================================
+// Listing model: Khách sạn, Tour, Địa điểm du lịch
+// - Lưu thông tin: title, description, image, location, price
+// - Quan hệ: N Listings <- 1 User (owner)
+// - Quan hệ: 1 Listing -> N Bookings
+// - Hỗ trợ NLP search: location, price, keywords
+// ============================================
+model Listing {
+  id          String   @id @default(cuid())
+  title       String   @db.NVarChar(500)
+  description String   @db.NVarChar(Max)
+  imageSrc    String   @db.NVarChar(1000)
+  location    String   @db.NVarChar(500) // Indexed cho NLP search
+  price       Int      // VND, indexed cho range query
+  sourceUrl   String?  @db.NVarChar(1000) // Tạm thời không unique để tránh lỗi do dữ liệu cũ null/duplicate; sẽ chuẩn hoá sau
+  
+  // Toạ độ bản đồ (Google Maps)
+  // Mặc định: Hồ Chí Minh
+  latitude    Float    @default(10.762622)
+  longitude   Float    @default(106.660172)
+  updatedAt   DateTime @default(now()) @updatedAt
+  createdAt   DateTime @default(now())
+  
+  // Owner relationship
+  userId      String
+  user        User     @relation("UserListings", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Booking relationship
+  bookings    Booking[] @relation("ListingBookings")
+  
+  // Indexes for search performance
+  @@index([location])
+  @@index([price])
+}
+
+// ============================================
+// 4. BOOKING MODULE
+// ============================================
+// Booking model: Đặt phòng/tour
+// - Lưu ngày: startDate, endDate
+// - Tính tổng giá: totalPrice
+// - Quan hệ: N Bookings <- 1 User (người đặt)
+// - Quan hệ: N Bookings <- 1 Listing (địa điểm)
+// - onDelete: NoAction cho User để tránh cyclic cascade
+// ============================================
+model Booking {
+  id         String   @id @default(cuid())
+  startDate  DateTime
+  endDate    DateTime
+  totalPrice Int
+  
+  // Trạng thái thanh toán
+  // PENDING | PAID | CANCELLED
+  status     String   @default("PENDING") @db.NVarChar(50)
+  
+  createdAt  DateTime @default(now())
+  
+  // User relationship (NoAction để tránh cyclic cascade với Listing)
+  userId     String
+  user       User     @relation("UserBookings", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // Listing relationship
+  listingId  String
+  listing    Listing  @relation("ListingBookings", fields: [listingId], references: [id], onDelete: Cascade)
+  
+  // Index for date range queries
+  @@index([listingId, startDate, endDate])
+}
+
+// ============================================
+// 5. SMART TRAVEL ECOSYSTEM MODELS
+// ============================================
+
+// 5.1 Destination (Thành phố/Vùng)
+model Destination {
+  id          String   @id @default(cuid())
+  name        String   @db.NVarChar(200)
+  description String   @db.NVarChar(Max)
+  imageSrc    String   @db.NVarChar(1000)
+  bestTime    String?  @db.NVarChar(200)
+  tips        String?  @db.NVarChar(Max)
+
+  places      Place[]
+  tours       Tour[]
+  itineraries Itinerary[]
+}
+
+// 5.2 Phân loại địa điểm (string)
+// Allowed values: HOTEL | RESTAURANT | ATTRACTION
+
+// 5.3 Place (Địa điểm cụ thể trong 1 thành phố)
+model Place {
+  id           String      @id @default(cuid())
+  name         String      @db.NVarChar(300)
+  type         String      @db.NVarChar(50) // 'HOTEL' | 'RESTAURANT' | 'ATTRACTION'
+  description  String      @db.NVarChar(Max)
+  imageSrc     String      @db.NVarChar(1000)
+  address      String      @db.NVarChar(500)
+  priceRange   String?     @db.NVarChar(100)
+  rating       Float       @default(0)
+  details      String?     @db.NVarChar(Max) // JSON string for flexible details
+
+  destinationId String
+  destination   Destination @relation(fields: [destinationId], references: [id])
+
+  itineraryItems ItineraryItem[]
+
+  // Optional coordinates for maps
+  latitude     Float? 
+  longitude    Float?
+
+  @@index([destinationId])
+  @@index([type])
+}
+
+// 5.4 Tour (Tour trọn gói)
+model Tour {
+  id           String      @id @default(cuid())
+  title        String      @db.NVarChar(300)
+  price        Int
+  duration     String      @db.NVarChar(100)
+  schedule     String      @db.NVarChar(Max)
+
+  destinationId String
+  destination   Destination @relation(fields: [destinationId], references: [id])
+
+  @@index([destinationId])
+}
+
+// 5.5 Itinerary (Kế hoạch/Lịch trình)
+model Itinerary {
+  id            String      @id @default(cuid())
+  title         String      @db.NVarChar(300)
+  description   String      @db.NVarChar(Max)
+  totalDays     Int
+  tags          String?     @db.NVarChar(200)
+  destinationId String
+  destination   Destination @relation(fields: [destinationId], references: [id])
+
+  items         ItineraryItem[]
+
+  createdAt     DateTime    @default(now())
+  isTemplate    Boolean     @default(false)
+
+  @@index([destinationId])
+}
+
+// 5.6 ItineraryItem (Chi tiết từng bước)
+model ItineraryItem {
+  id          String    @id @default(cuid())
+  day         Int
+  time        String    @db.NVarChar(50)
+  note        String?   @db.NVarChar(1000)
+
+  itineraryId String
+  itinerary   Itinerary @relation(fields: [itineraryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  placeId     String?
+  place       Place?    @relation(fields: [placeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([itineraryId])
+  @@index([placeId])
+}
+
+// Bảng chứa dữ liệu thô (Staging)
+model StagingListing {
+  id        String   @id @default(cuid())
+  sourceUrl String   @unique @db.NVarChar(1000) // Link gốc (để không crawl trùng)
+  rawJson   String   @db.NVarChar(Max) // Chứa toàn bộ thông tin thô - NVARCHAR để hỗ trợ Unicode
+  
+  // Phân loại: HOTEL, TOUR, RESTAURANT...
+  category  String   @default("UNKNOWN") @db.NVarChar(50)
+  
+  status    String   @default("PENDING") @db.NVarChar(50) // PENDING, PROCESSED, ERROR
+  errorLog  String?  @db.NVarChar(Max)
+  createdAt DateTime @default(now())
+}
+
+// ============================================
+// 6. B2B COMPETITOR INTELLIGENCE MODULE
+// ============================================
+// Competitor: Khách sạn / đối thủ cần theo dõi giá
+// CompetitorPrice: Lịch sử giá thu thập định kỳ
+// ============================================
+model Competitor {
+  id          String             @id @default(cuid())
+  name        String             @db.NVarChar(300)
+  url         String             @db.NVarChar(1000)
+  location    String?            @db.NVarChar(500)
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  prices      CompetitorPrice[]
+
+  // Optional owner (nếu cần multi-tenant sau này)
+  ownerUserId String?            @db.NVarChar(200)
+
+  @@index([active])
+  @@index([location])
+}
+
+model CompetitorPrice {
+  id           String      @id @default(cuid())
+  competitorId String
+  competitor   Competitor  @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  capturedAt   DateTime    @default(now())
+  price        Int         // Giá theo VND
+  currency     String      @default("VND") @db.NVarChar(10)
+  source       String?     @db.NVarChar(100) // e.g. 'booking', 'agoda', 'native'
+  rawHtml      String?     @db.NVarChar(Max) // lưu snippet thô để audit parse
+  note         String?     @db.NVarChar(500)
+
+  @@index([competitorId, capturedAt])
+  @@index([price])
+}

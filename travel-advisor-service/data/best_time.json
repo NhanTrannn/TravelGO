@@ -1,0 +1,85 @@
+{
+  "southern": {
+    "summary": "có khí hậu nhiệt đới gió mùa, phân hóa rõ giữa mùa khô và mùa mưa, nhìn chung ổn định và dễ chịu vào mùa khô",
+    "best_months": [12, 1, 2, 3, 4],
+    "good_months": [5, 11],
+    "ok_months": [],
+    "avoid_months": [6, 7, 8, 9, 10],
+    "reasons": {
+      "best": "từ khoảng tháng 12 đến tháng 4, khi đang trong mùa khô, ít mưa, thời tiết ổn định, thuận lợi cho tham quan, du lịch sông nước và nghỉ dưỡng",
+      "avoid": "khoảng tháng 6 đến tháng 10 vì đây là mùa mưa, thường có mưa lớn và giông, dễ ảnh hưởng đến các hoạt động ngoài trời"
+    }
+  },
+
+  "northeast": {
+    "summary": "có địa hình đồi núi, khí hậu mát mẻ hơn đồng bằng và thay đổi rõ theo mùa, đặc biệt dễ chịu vào mùa xuân và mùa thu",
+    "best_months": [3, 4, 9, 10, 11],
+    "good_months": [12, 1, 2],
+    "ok_months": [5],
+    "avoid_months": [6, 7, 8],
+    "reasons": {
+      "best": "vào mùa xuân và mùa thu, khi thời tiết mát mẻ, khô ráo, rất phù hợp cho trekking, săn cảnh và tham quan thiên nhiên",
+      "avoid": "mùa hè do thời tiết nóng ẩm, mưa nhiều, đường rừng trơn trượt và tầm nhìn thường bị hạn chế"
+    }
+  },
+
+  "red_river_delta": {
+    "summary": "có khí hậu cận nhiệt đới ẩm, với mùa xuân và mùa thu thường có thời tiết dễ chịu, thuận lợi cho du lịch đô thị và văn hóa",
+    "best_months": [3, 4, 9, 10, 11],
+    "good_months": [12, 1, 2],
+    "ok_months": [5],
+    "avoid_months": [6, 7, 8],
+    "reasons": {
+      "best": "vào mùa xuân và mùa thu, khi nhiệt độ ôn hòa, ít mưa, rất phù hợp cho tham quan thành phố, di tích và trải nghiệm văn hóa",
+      "avoid": "mùa hè vì thời tiết oi bức, mưa lớn dễ gây ngập úng và gây bất tiện cho việc di chuyển"
+    }
+  },
+
+  "south_central_coast": {
+    "summary": "có mùa khô kéo dài, nhiều nắng và biển đẹp, tuy nhiên chịu ảnh hưởng rõ rệt của mưa bão vào cuối năm",
+    "best_months": [2, 3, 4, 5, 6],
+    "good_months": [7, 8],
+    "ok_months": [1],
+    "avoid_months": [9, 10, 11],
+    "reasons": {
+      "best": "từ khoảng tháng 2 đến tháng 6, khi trời nắng đẹp, biển êm, rất lý tưởng cho nghỉ dưỡng và các hoạt động du lịch biển",
+      "avoid": "từ tháng 9 đến tháng 11 do ảnh hưởng của mùa mưa bão, biển động và mưa lớn có thể làm gián đoạn lịch trình"
+    }
+  },
+
+  "central_highlands": {
+    "summary": "có khí hậu cao nguyên mát mẻ, dễ chịu quanh năm, với mùa mưa tập trung vào giữa năm nhưng hiếm khi kéo dài liên tục",
+    "best_months": [3, 4, 5, 9, 10, 11],
+    "good_months": [12, 1, 2],
+    "ok_months": [6, 7, 8],
+    "avoid_months": [],
+    "reasons": {
+      "best": "vào mùa khô và các giai đoạn giao mùa, khi thời tiết mát mẻ, cảnh quan xanh đẹp, rất phù hợp cho tham quan thiên nhiên và nghỉ dưỡng",
+      "avoid": "không có thời điểm nào quá xấu, chỉ cần lưu ý mưa rào xuất hiện nhiều hơn vào giữa năm"
+    }
+  },
+
+  "northwest": {
+    "summary": "có địa hình núi cao, khí hậu mát mẻ và cảnh quan thay đổi rõ theo mùa, đặc biệt đẹp vào mùa xuân và mùa thu",
+    "best_months": [3, 4, 9, 10, 11],
+    "good_months": [12, 1, 2],
+    "ok_months": [5],
+    "avoid_months": [6, 7, 8],
+    "reasons": {
+      "best": "vào mùa xuân và mùa thu, khi thời tiết mát mẻ, trời trong và cảnh quan núi rừng, ruộng bậc thang đẹp nhất",
+      "avoid": "mùa mưa hè do nguy cơ sạt lở, đường trơn và khó khăn cho việc di chuyển hoặc trekking"
+    }
+  },
+
+  "north_central": {
+    "summary": "có khí hậu chuyển tiếp giữa miền Bắc và miền Nam, thời tiết dễ chịu nhất vào các giai đoạn giao mùa",
+    "best_months": [2, 3, 4, 5, 9, 10, 11],
+    "good_months": [6, 7, 8],
+    "ok_months": [12, 1],
+    "avoid_months": [],
+    "reasons": {
+      "best": "vào mùa xuân và mùa thu, khi thời tiết mát mẻ hơn, phù hợp cho du lịch văn hóa, tham quan và nghỉ dưỡng biển",
+      "avoid": "mùa hè vì thời tiết thường nóng và có mưa rào, cần linh hoạt trong việc sắp xếp lịch trình"
+    }
+  }
+}

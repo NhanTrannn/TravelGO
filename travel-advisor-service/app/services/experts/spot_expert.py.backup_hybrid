@@ -1,0 +1,520 @@
+"""
+Spot Expert - Retrieves tourist attractions and spots with semantic search
+Supports web search fallback when database results are insufficient
+"""
+
+import time
+from typing import Dict, Any, List
+from .base_expert import BaseExpert, ExpertResult
+from app.core import logger
+from app.services.data_collector import record_search_failure
+from app.services.confidence_scorer import should_use_web_search
+from app.services.web_search_agent import search_and_synthesize
+
+
+class SpotExpert(BaseExpert):
+    """
+    Expert for finding tourist attractions and spots
+    Uses hybrid search: Semantic (Embedding) + Keyword + Filters
+    """
+    
+    # Cached embedded spots (loaded once)
+    _embedded_spots_cache = None
+    _cache_province = None
+    
+    # SPOT-SPECIFIC province_id mapping
+    # spots_detailed uses city/landmark names, NOT province names
+    # This maps user input to actual province_id in spots_detailed collection
+    SPOT_PROVINCE_IDS = {
+        # City/landmark -> province_id in spots_detailed
+        "đà lạt": "da-lat",
+        "da lat": "da-lat",
+        "dalat": "da-lat",
+        "lâm đồng": "da-lat",  # Province name -> city in spots DB
+        "lam dong": "da-lat",
+        
+        "hội an": "hoi-an",
+        "hoi an": "hoi-an",
+        "hoian": "hoi-an",
+        "quảng nam": "hoi-an",  # Province -> city
+        "quang nam": "hoi-an",
+        
+        "nha trang": "khanh-hoa",
+        "khánh hòa": "khanh-hoa",
+        "khanh hoa": "khanh-hoa",
+        
+        "phú quốc": "phu-quoc",
+        "phu quoc": "phu-quoc",
+        "kiên giang": "phu-quoc",
+        "kien giang": "phu-quoc",
+        
+        "sapa": "sapa",
+        "sa pa": "sapa",
+        "lào cai": "sapa",
+        "lao cai": "sapa",
+        
+        "huế": "hue",
+        "hue": "hue",
+        "thừa thiên huế": "hue",
+        "thua thien hue": "hue",
+        
+        # Direct mappings (already correct in DB)
+        "hà nội": "ha-noi",
+        "ha noi": "ha-noi",
+        "hanoi": "ha-noi",
+        
+        "đà nẵng": "da-nang",
+        "da nang": "da-nang",
+        "danang": "da-nang",
+        
+        "hồ chí minh": "ho-chi-minh",
+        "ho chi minh": "ho-chi-minh",
+        "sài gòn": "ho-chi-minh",
+        "sai gon": "ho-chi-minh",
+        "saigon": "ho-chi-minh",
+        
+        "hạ long": "quang-ninh",
+        "ha long": "quang-ninh",
+        "halong": "quang-ninh",
+        "quảng ninh": "quang-ninh",
+        "quang ninh": "quang-ninh",
+        
+        "vũng tàu": "ba-ria-vung-tau",
+        "vung tau": "ba-ria-vung-tau",
+        "bà rịa vũng tàu": "ba-ria-vung-tau",
+        
+        "phan thiết": "binh-thuan",
+        "phan thiet": "binh-thuan",
+        "mũi né": "binh-thuan",
+        "mui ne": "binh-thuan",
+        "bình thuận": "binh-thuan",
+        "binh thuan": "binh-thuan",
+        
+        "cần thơ": "can-tho",
+        "can tho": "can-tho",
+        
+        "hải phòng": "hai-phong",
+        "hai phong": "hai-phong",
+        "cát bà": "hai-phong",
+        "cat ba": "hai-phong",
+        
+        "ninh bình": "ninh-binh",
+        "ninh binh": "ninh-binh",
+        
+        "hà giang": "ha-giang",
+        "ha giang": "ha-giang",
+        
+        "cao bằng": "cao-bang",
+        "cao bang": "cao-bang",
+    }
+    
+    # Synonym mapping for better search
+    SYNONYMS = {
+        "biển": ["biển", "bãi biển", "beach", "bờ biển"],
+        "núi": ["núi", "đồi", "mountain", "leo núi", "trekking"],
+        "chùa": ["chùa", "đền", "temple", "pagoda", "tự viện", "tâm linh", "tu viện"],
+        "thác": ["thác", "thác nước", "waterfall"],
+        "hồ": ["hồ", "lake", "hồ nước"],
+        "phố cổ": ["phố cổ", "old town", "phố"],
+        "công viên": ["công viên", "park", "vườn"],
+        "bảo tàng": ["bảo tàng", "museum", "triển lãm"],
+        "cảnh đẹp": ["cảnh đẹp", "view", "ngắm cảnh", "check-in"],
+        "tâm linh": ["tâm linh", "chùa", "đền", "temple", "pagoda", "tự viện", "linh thiêng"]
+    }
+    
+    def __init__(self, mongo_client=None, vector_client=None, llm_client=None, embedding_service=None):
+        """Initialize with optional embedding service"""
+        super().__init__(mongo_client, vector_client, llm_client)
+        self.embedding = embedding_service
+        if self.embedding:
+            logger.info("✅ SpotExpert with semantic search enabled")
+        else:
+            logger.info("⚠️  SpotExpert running without semantic search")
+    
+    @property
+    def expert_type(self) -> str:
+        return "spot_expert"
+    
+    def _normalize_location_for_spots(self, location: str) -> str:
+        """
+        Normalize location to province_id for spots_detailed collection.
+        Uses SPOT_PROVINCE_IDS mapping which maps to actual province_id values in spots DB.
+        This is different from hotels which use actual province names.
+        """
+        if not location:
+            return None
+        
+        # Convert to lowercase for matching
+        location_lower = location.lower().strip()
+        
+        # Check direct mapping first
+        if location_lower in self.SPOT_PROVINCE_IDS:
+            province_id = self.SPOT_PROVINCE_IDS[location_lower]
+            logger.info(f"📍 Spot location mapping: '{location}' -> '{province_id}'")
+            return province_id
+        
+        # Try removing Vietnamese diacritics and common prefixes
+        import re
+        
+        # Remove common suffixes/prefixes
+        clean_location = re.sub(r"\s*(tỉnh|thành phố|tp\.?|city)\s*", "", location_lower, flags=re.IGNORECASE)
+        clean_location = clean_location.strip()
+        
+        if clean_location in self.SPOT_PROVINCE_IDS:
+            province_id = self.SPOT_PROVINCE_IDS[clean_location]
+            logger.info(f"📍 Spot location mapping (cleaned): '{location}' -> '{province_id}'")
+            return province_id
+        
+        # Fallback: use base class normalize (convert to slug format)
+        # This handles provinces that are consistent between hotels and spots
+        province_id = self._normalize_location(location)
+        logger.info(f"📍 Spot location fallback: '{location}' -> '{province_id}'")
+        return province_id
+    
+    def execute(self, query: str, parameters: Dict[str, Any]) -> ExpertResult:
+        """
+        Find tourist spots
+        
+        Parameters:
+            - location: Province/city name
+            - interests: List of interest tags
+            - keywords: Additional search keywords
+            - limit: Max results (default 10)
+            - original_query: Original user message (for semantic pattern detection)
+        """
+        start_time = time.time()
+        
+        try:
+            location = parameters.get("location")
+            interests = parameters.get("interests", [])
+            keywords = parameters.get("keywords", [])
+            limit = parameters.get("limit", 10)
+            original_query = parameters.get("original_query", query)  # Use original if available
+            
+            # Normalize location to province_id FOR SPOTS (different from hotels!)
+            province_id = self._normalize_location_for_spots(location)
+            
+            logger.info(f"🔍 SpotExpert: query='{query}', original='{original_query[:50]}...', province={province_id}")
+            
+            # Build search terms with synonyms from BOTH query and extracted keywords
+            search_terms = self._expand_search_terms(query, interests, keywords)
+            
+            # Add common semantic patterns not in SYNONYMS yet
+            # CRITICAL: Use original_query for semantic pattern detection
+            query_for_patterns = original_query.lower()
+            if any(word in query_for_patterns for word in ["tâm linh", "religion", "spiritual"]):
+                search_terms.extend(["chùa", "đền", "temple", "pagoda", "tự viện", "linh thiêng"])
+                logger.info("🔍 Detected spiritual keywords - adding temple-related terms")
+            if any(word in query_for_patterns for word in ["cổ", "lịch sử", "history", "ancient"]):
+                search_terms.extend(["phố cổ", "di tích", "bảo tàng", "cổ kính"])
+                logger.info("🔍 Detected historical keywords - adding heritage-related terms")
+            
+            search_terms = list(set(search_terms))  # Deduplicate
+            logger.info(f"🔍 Final search terms: {search_terms[:10]}")
+            
+            # HYBRID SEARCH: Keyword + Semantic
+            keyword_results = []
+            semantic_results = []
+            
+            # 1. Keyword search in MongoDB (fast, exact match with synonyms)
+            keyword_results = self._search_mongo(province_id, search_terms, limit * 2)
+            logger.info(f"🔍 Keyword search found {len(keyword_results)} results")
+            
+            # 2. Semantic search with embeddings (ALWAYS for quality improvement)
+            # Changed: Don't make it conditional on keyword_results < limit
+            # Semantic search should always enhance results, not just fill gaps
+            if self.embedding:
+                # Load and embed spots (with caching)
+                embedded_spots = self._get_or_create_embedded_spots(province_id, limit * 3)
+                
+                if embedded_spots:
+                    # Use original_query for better semantic matching
+                    semantic_results = self.embedding.semantic_search(
+                        query=original_query,
+                        spots=embedded_spots,
+                        top_k=limit * 2,
+                        threshold=0.30  # Adjusted threshold
+                    )
+                    logger.info(f"🔍 Semantic search found {len(semantic_results)} results")
+            
+            # 3. Re-rank by combining scores
+            if semantic_results and keyword_results:
+                # Both searches returned results - combine
+                results = self.embedding.rerank_spots(
+                    keyword_results=keyword_results,
+                    semantic_results=semantic_results,
+                    keyword_weight=0.5,  # Increased keyword weight
+                    semantic_weight=0.5
+                )
+                logger.info(f"📊 Using hybrid reranked results ({len(results)} spots)")
+            elif keyword_results:
+                # Only keyword results
+                results = keyword_results
+                logger.info("📊 Using keyword-only results")
+            elif semantic_results:
+                # Only semantic results
+                results = [spot for spot, score in semantic_results]
+                for i, (spot, score) in enumerate(semantic_results):
+                    results[i]["confidence"] = score
+                logger.info("📊 Using semantic-only results")
+            else:
+                results = []
+            
+            # === DATA COLLECTION TRACKING ===
+            # Record if results are insufficient
+            min_expected = 5  # Minimum acceptable results
+            if len(results) < min_expected:
+                record_search_failure(
+                    query=original_query,
+                    province=location or province_id,
+                    data_type='spots',
+                    keywords=search_terms,
+                    result_count=len(results)
+                )
+                logger.info(f"📝 Recorded data gap: {location or province_id}/spots ({len(results)} < {min_expected})")
+            
+            # === CONFIDENCE SCORING & WEB SEARCH FALLBACK ===
+            # Check if results are reliable enough
+            need_web_search, confidence_info = should_use_web_search(
+                results=results,
+                data_type='spots',
+                query=original_query,
+                province=province_id,
+                theme=parameters.get('theme')
+            )
+            
+            logger.info(f"🎯 Confidence: {confidence_info['score']} ({confidence_info['level']}) - {confidence_info['reason']}")
+            
+            # If confidence is low, try web search
+            web_search_used = False
+            web_search_answer = None
+            
+            if need_web_search:
+                logger.info(f"🌐 Low confidence ({confidence_info['score']}), activating web search...")
+                try:
+                    # Build context from existing results
+                    context = None
+                    if results:
+                        context = f"Đã tìm được {len(results)} địa điểm từ database: " + \
+                                ", ".join([r.get('name', 'N/A') for r in results[:3]])
+                    
+                    # Perform web search
+                    web_result = search_and_synthesize(
+                        query=original_query,
+                        province=province_id,
+                        context=context,
+                        max_results=5
+                    )
+                    
+                    if web_result.get('answer') and web_result.get('confidence', 0) > 0.5:
+                        web_search_used = True
+                        web_search_answer = web_result['answer']
+                        logger.info(f"✅ Web search successful (confidence: {web_result['confidence']})")
+                        logger.info(f"📰 Sources: {', '.join([s['source'] for s in web_result.get('sources', [])])}")
+                    else:
+                        logger.warning("⚠️ Web search returned low quality results")
+                        
+                except Exception as e:
+                    logger.error(f"❌ Web search failed: {e}")
+            
+            # Sort by confidence (if available) or rating
+            if results and "confidence" in results[0]:
+                results.sort(key=lambda x: (x.get("confidence", 0), x.get("rating", 0)), reverse=True)
+            else:
+                results.sort(key=lambda x: float(x.get("rating", 0)), reverse=True)
+            
+            results = results[:limit]
+            
+            execution_time = int((time.time() - start_time) * 1000)
+            
+            # Generate summary
+            summary = self._generate_summary(results, location)
+            
+            # Add web search info to summary if used
+            if web_search_used and web_search_answer:
+                summary += f"\n\n🌐 **Thông tin bổ sung từ web:**\n{web_search_answer}"
+            
+            return ExpertResult(
+                expert_type=self.expert_type,
+                success=True,
+                data=results,
+                summary=summary,
+                execution_time_ms=execution_time,
+                metadata={
+                    'confidence': confidence_info,
+                    'web_search_used': web_search_used,
+                    'web_search_answer': web_search_answer if web_search_used else None
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"❌ SpotExpert error: {e}")
+            return ExpertResult(
+                expert_type=self.expert_type,
+                success=False,
+                data=[],
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+    
+    def _expand_search_terms(self, query: str, interests: List[str], keywords: List[str]) -> List[str]:
+        """Expand search terms with synonyms"""
+        terms = set()
+        
+        # Add original keywords
+        terms.update(keywords)
+        
+        # Add interests
+        terms.update(interests)
+        
+        # Expand with synonyms (check if key OR any synonym in query)
+        query_lower = query.lower()
+        for key, synonyms in self.SYNONYMS.items():
+            # Check if key itself is in query
+            if key in query_lower:
+                terms.update(synonyms)
+                continue
+            
+            # Check if any synonym is in query
+            for syn in synonyms:
+                if syn in query_lower:
+                    terms.update(synonyms)
+                    break
+        
+        logger.info(f"🔍 Expanded search terms: {list(terms)[:10]}")  # Debug
+        return list(terms)
+    
+    def _search_mongo(self, province_id: str, search_terms: List[str], limit: int) -> List[Dict]:
+        """Search spots in MongoDB"""
+        if self.mongo is None:
+            return []
+        
+        try:
+            collection = self.mongo.get_collection("spots_detailed")
+            if collection is None:
+                return []
+            
+            # Build query
+            query = {}
+            
+            if province_id:
+                query["province_id"] = province_id
+            
+            # Text search on name and description
+            if search_terms:
+                or_conditions = []
+                for term in search_terms:
+                    or_conditions.extend([
+                        {"name": {"$regex": term, "$options": "i"}},
+                        {"description_short": {"$regex": term, "$options": "i"}},
+                        {"tags": {"$regex": term, "$options": "i"}}
+                    ])
+                if or_conditions:
+                    query["$or"] = or_conditions
+            
+            # Execute query
+            cursor = collection.find(query).sort("rating", -1).limit(limit * 2)
+            
+            results = []
+            for doc in cursor:
+                results.append({
+                    "id": doc.get("id"),
+                    "name": doc.get("name"),
+                    "province_id": doc.get("province_id"),
+                    "description": doc.get("description_short", doc.get("description_full", "")[:200]),
+                    "image": doc.get("image"),
+                    "rating": doc.get("rating", 0),
+                    "reviews_count": doc.get("reviews_count", 0),
+                    "address": doc.get("address", ""),
+                    "cost": doc.get("cost", ""),
+                    "tags": doc.get("tags", []),
+                    "source": "mongodb"
+                })
+            
+            return results[:limit]
+            
+        except Exception as e:
+            logger.error(f"❌ MongoDB search error: {e}")
+            return []
+    
+    def _get_or_create_embedded_spots(self, province_id: str, limit: int) -> List[Dict]:
+        """
+        Get or create cached embedded spots for a province
+        
+        Args:
+            province_id: Province identifier
+            limit: Max spots to load
+            
+        Returns:
+            List of spots with embeddings
+        """
+        if self.embedding is None or self.mongo is None:
+            return []
+        
+        # Check cache
+        if (SpotExpert._embedded_spots_cache is not None and 
+            SpotExpert._cache_province == province_id):
+            logger.info(f"💾 Using cached embeddings for {province_id}")
+            return SpotExpert._embedded_spots_cache
+        
+        try:
+            # Load spots from MongoDB
+            collection = self.mongo.get_collection("spots_detailed")
+            if collection is None:
+                return []
+            
+            query = {}
+            if province_id:
+                query["province_id"] = province_id
+            
+            cursor = collection.find(query).limit(limit * 2)
+            spots = []
+            for doc in cursor:
+                spots.append({
+                    "id": doc.get("id"),
+                    "name": doc.get("name"),
+                    "province_id": doc.get("province_id"),
+                    "description_short": doc.get("description_short", ""),
+                    "description_full": doc.get("description_full", ""),
+                    "image": doc.get("image"),
+                    "rating": doc.get("rating", 0),
+                    "reviews_count": doc.get("reviews_count", 0),
+                    "address": doc.get("address", ""),
+                    "cost": doc.get("cost", ""),
+                    "tags": doc.get("tags", []),
+                    "source": "mongodb"
+                })
+            
+            if not spots:
+                return []
+            
+            logger.info(f"📦 Chunking and embedding {len(spots)} spots...")
+            
+            # Chunk and embed
+            embedded_spots = self.embedding.chunk_and_embed_spots(spots, chunk_size=300)
+            
+            # Cache results
+            SpotExpert._embedded_spots_cache = embedded_spots
+            SpotExpert._cache_province = province_id
+            
+            logger.info(f"✅ Cached {len(embedded_spots)} embedded spots for {province_id}")
+            
+            return embedded_spots
+            
+        except Exception as e:
+            import traceback
+            logger.error(f"❌ Error creating embedded spots: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return []
+    
+    def _search_vector(self, query: str, province_id: str, limit: int) -> List[Dict]:
+        """Search spots using vector similarity (deprecated - use semantic_search instead)"""
+        return []
+    
+    def _generate_summary(self, results: List[Dict], location: str) -> str:
+        """Generate a brief summary of found spots"""
+        if not results:
+            return f"Không tìm thấy địa điểm phù hợp ở {location or 'khu vực này'}"
+        
+        top_spots = [r.get("name", "?") for r in results[:3]]
+        return f"Tìm thấy {len(results)} địa điểm tại {location or 'Việt Nam'}. Top gợi ý: {', '.join(top_spots)}"

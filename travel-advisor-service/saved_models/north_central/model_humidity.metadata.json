@@ -1,0 +1,29 @@
+{
+  "metadata_version": "2.0.0",
+  "generated_at": "2025-12-31T13:00:00",
+  "source": "actual_model_inspection",
+  "region": "north_central",
+  "target": "humidity",
+  "features": [
+    "coastal_flag",
+    "dayofyear",
+    "highland_flag",
+    "humidity_change",
+    "humidity_lag_1",
+    "humidity_lag_3",
+    "humidity_lag_7",
+    "humidity_rolling_mean_14",
+    "humidity_rolling_mean_3",
+    "humidity_rolling_mean_7",
+    "humidity_rolling_std_14",
+    "humidity_rolling_std_3",
+    "humidity_rolling_std_7",
+    "lowland_flag",
+    "month",
+    "month_cos",
+    "month_sin",
+    "season"
+  ],
+  "feature_count": 18,
+  "note": "Features extracted directly from trained model"
+}
