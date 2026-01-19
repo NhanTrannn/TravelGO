@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import csvDB from "@/lib/csvdb";
 
@@ -6,13 +7,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { messages, companions, interests, conversation_stage, plan_shown, hotels_shown } = body;
     let { destination, budget, days, selected_hotel } = body;
-    
-    console.log("🎯 Conversation State:", { 
-      stage: conversation_stage, 
-      plan_shown, 
+
+    console.log("🎯 Conversation State:", {
+      stage: conversation_stage,
+      plan_shown,
       hotels_shown,
       destination,
-      days 
+      days
     });
 
     // PARSE CONTEXT TỪ USER MESSAGES NẾU CHƯA CÓ
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       const lastUserMsg = messages.filter((m: { role: string }) => m.role === "user").pop();
       if (lastUserMsg) {
         const text = lastUserMsg.content.toLowerCase();
-        
+
         // Extract destination (tìm tên thành phố Việt Nam)
         const vnCities = ["đà lạt", "nha trang", "hội an", "phú quốc", "đà nẵng", "hạ long", "sapa", "hồ chí minh", "hà nội", "huế", "mũi né", "vũng tàu"];
         for (const city of vnCities) {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
             break;
           }
         }
-        
+
         // Extract days
         if (text.match(/(\d+)\s*(ngày|day)/)) {
           const match = text.match(/(\d+)\s*(ngày|day)/);
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
         } else if (text.includes("3 ngày 2 đêm") || text.includes("3n2đ")) {
           days = "3 ngày 2 đêm";
         }
-        
+
         // Extract budget
         if (text.includes("tiết kiệm")) budget = "💰 Tiết kiệm (<5tr)";
         else if (text.includes("trung bình")) budget = "💵 Trung bình (5-10tr)";
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       if (hotelMatch) {
         selected_hotel = hotelMatch[1].trim();
         console.log("🏨 User selected hotel:", selected_hotel);
-        
+
         // Return response with next action options
         return NextResponse.json({
           reply: `Tuyệt vời! Bạn đã chọn **${selected_hotel}**. 🎉\n\nBạn muốn tôi giúp gì tiếp theo?`,
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
     const fptRes = await fetch("http://127.0.0.1:8001/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         messages,
         context: {
           conversation_stage: conversation_stage || "initial",
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
     });
 
     const fptData = await fptRes.json();
-    
+
     // CẬP NHẬT CONTEXT TỪ FPT RESPONSE (extracted_info)
     if (fptData.extracted_info) {
       if (fptData.extracted_info.destination) destination = fptData.extracted_info.destination;
@@ -109,21 +110,21 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("📊 Context after FPT:", { destination, days, budget });
-    
+
     // 2. CHECK INTENT TỪ FPT RESPONSE
     const intent = fptData.intent || "collect_info";
     console.log("🎯 Detected Intent:", intent);
-    
+
     // 3. XỬ LÝ THEO INTENT VỚI CONVERSATION CONTEXT
-    
+
     // 3A. INTENT = "info" → Thử tìm trong DB trước, nếu không có mới dùng simple-chat
     if (intent === "info") {
       console.log(`💬 Intent=info - Checking database first for real data`);
-      
+
       // Extract location từ message để query DB
       const lastUserMsg = messages.filter((m: { role: string }) => m.role === "user").pop();
       let searchLocation = destination || "";
-      
+
       // Nếu chưa có destination, thử extract từ message
       if (!searchLocation && lastUserMsg) {
         const text = lastUserMsg.content.toLowerCase();
@@ -177,12 +178,12 @@ export async function POST(req: NextRequest) {
       // Nếu CÓ data từ DB → Trả về thông tin thực tế
       if (dbResults && dbResults.length > 0) {
         console.log(`📊 Using real data from database`);
-        
+
         // Tạo reply từ data thực tế
-        const listingSummary = dbResults.map((l, idx) => 
+        const listingSummary = dbResults.map((l, idx) =>
           `${idx + 1}. **${l.title}** - ${l.location} (${(l.price / 1000).toFixed(0)}k/đêm)`
         ).join("\n");
-        
+
         const reply = `Dựa trên dữ liệu thực tế, đây là thông tin về ${normalizedCity}:\n\n${listingSummary}\n\n💡 Bạn muốn biết thêm chi tiết nào?`;
 
         return NextResponse.json({
@@ -206,7 +207,7 @@ export async function POST(req: NextRequest) {
 
       // Nếu KHÔNG CÓ data trong DB → Chuyển sang simple-chat
       console.log(`🤖 No data in DB, redirecting to simple-chat for AI knowledge`);
-      
+
       try {
         const simpleChatRes = await fetch("http://127.0.0.1:8001/simple-chat", {
           method: "POST",
@@ -260,11 +261,11 @@ export async function POST(req: NextRequest) {
         });
       }
     }
-    
+
     // 3C. INTENT = "budget" → Luôn show breakdown
     if (intent === "budget") {
       console.log(`💬 Intent=budget - Returning budget breakdown`);
-      
+
       let ui_data: Record<string, unknown> | undefined = undefined;
       if (fptData.budget_breakdown) {
         ui_data = { budget: fptData.budget_breakdown };
@@ -289,7 +290,7 @@ export async function POST(req: NextRequest) {
         }
       });
     }
-    
+
     // 3D. INTENT = "itinerary" → Luôn show plan UI (cho phép tạo nhiều plan khác nhau)
     if (intent === "itinerary") {
       console.log(`💬 Intent=itinerary - Generating new plan (plan_shown=${plan_shown})`);
@@ -334,7 +335,7 @@ export async function POST(req: NextRequest) {
         }
       });
     }
-    
+
     // 3E. INTENT = "filter" → Xử lý lọc địa danh, KHÔNG show plan
     if (intent === "filter") {
       console.log(`💬 Intent=filter - Filtering places/attractions`);
@@ -356,15 +357,15 @@ export async function POST(req: NextRequest) {
         }
       });
     }
-    
+
     // 3F. CHECK XEM ĐÃ SHOW HOTELS CHƯA (cho intent="search" hoặc "collect_info")
     // Ưu tiên dùng context thay vì scan messages
     console.log("🔍 Hotel status:", { hotels_shown, destination, days });
-    
+
     // 3G. NẾU INTENT="search" + ĐỦ INFO + CHƯA SHOW HOTELS → QUERY DATABASE
     if (intent === "search" && destination && days && !hotels_shown) {
       console.log("🏨 Intent=search - Querying database for:", destination);
-      
+
       // Normalize destination: "Đống Đa Hà Nội" → "Hà Nội", "Quận 1 Sài Gòn" → "Sài Gòn"
       const cityKeywords = ["Hà Nội", "Đà Lạt", "Nha Trang", "Đà Nẵng", "Hội An", "Phú Quốc", "Vũng Tàu", "Huế", "Sài Gòn", "Hồ Chí Minh", "Hạ Long", "Sapa"];
       let normalizedCity = destination;
@@ -375,10 +376,10 @@ export async function POST(req: NextRequest) {
         }
       }
       console.log("📍 Normalized destination:", destination, "→", normalizedCity);
-      
+
       // Query ALL hotels từ CSV database (không giới hạn)
       const hotels = csvDB.listing.searchByLocation(normalizedCity);
-      
+
       // Sắp xếp theo giá tăng dần
       hotels.sort((a, b) => a.price - b.price);
 

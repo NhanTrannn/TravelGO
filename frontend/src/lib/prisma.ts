@@ -1,14 +1,11 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@prisma/client";
 
-declare global {
-  var prisma: PrismaClient | undefined
-}
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Singleton pattern để tránh tạo quá nhiều kết nối trong development
-const client = globalThis.prisma || new PrismaClient({
+const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-})
+});
 
-if (process.env.NODE_ENV !== "production") globalThis.prisma = client
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-export default client
+export default prisma;
