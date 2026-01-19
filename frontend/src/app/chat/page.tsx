@@ -91,11 +91,15 @@ export default function ChatPage() {
         role: "assistant",
         content: `Chào bạn! 👋 Tôi là trợ lý du lịch AI. Hãy cùng lên kế hoạch chuyến đi tuyệt vời nhé! Bạn muốn đi đâu? ✈️
 
-💡 **Ví dụ cách hỏi:**
-• "Lên lịch trình đi Đà Nẵng 3 ngày"
-• "Tìm khách sạn ở Phú Quốc giá rẻ"
-• "Gợi ý địa điểm du lịch Hà Nội"
-• "Du lịch Nha Trang 5 ngày 2 người ngân sách 10 triệu"`,
+💡 **Gợi ý cách hỏi:**
+
+• Lên lịch trình đi Đà Nẵng 3 ngày
+
+• Tìm khách sạn ở Phú Quốc giá rẻ
+
+• Gợi ý địa điểm du lịch Hà Nội
+
+• Du lịch Nha Trang 5 ngày 2 người ngân sách 10 triệu`,
         ui_type: "none"
       }])
     }
@@ -118,11 +122,15 @@ export default function ChatPage() {
       role: "assistant",
       content: `Chào bạn! 👋 Tôi là trợ lý du lịch AI. Hãy cùng lên kế hoạch chuyến đi tuyệt vời nhé! Bạn muốn đi đâu? ✈️
 
-💡 **Ví dụ cách hỏi:**
-• "Lên lịch trình đi Đà Nẵng 3 ngày"
-• "Tìm khách sạn ở Phú Quốc giá rẻ"
-• "Gợi ý địa điểm du lịch Hà Nội"
-• "Du lịch Nha Trang 5 ngày 2 người ngân sách 10 triệu"`,
+💡 **Gợi ý cách hỏi:**
+
+• Lên lịch trình đi Đà Nẵng 3 ngày
+
+• Tìm khách sạn ở Phú Quốc giá rẻ
+
+• Gợi ý địa điểm du lịch Hà Nội
+
+• Du lịch Nha Trang 5 ngày 2 người ngân sách 10 triệu`,
       ui_type: "none"
     }])
     setTravelContext({
