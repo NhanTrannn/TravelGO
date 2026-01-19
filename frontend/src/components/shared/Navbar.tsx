@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import useListingModal from '@/hooks/useListingModal';
 import useLoginModal from '@/hooks/useLoginModal';
 import useRegisterModal from '@/hooks/useRegisterModal';
-import useListingModal from '@/hooks/useListingModal';
-import { Menu, X, User, LogOut, PlusCircle, MapPin, Home, Phone } from 'lucide-react';
+import { Home, LogOut, MapPin, Menu, Phone, PlusCircle, User, X } from 'lucide-react';
+import { signOut, useSession } from 'next-auth/react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 const Navbar = () => {
   const { data: session } = useSession();
@@ -53,7 +53,7 @@ const Navbar = () => {
                 T
               </div>
               <span className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-blue-600 to-blue-400">
-                <TravelGO></TravelGO>
+                TravelGO
               </span>
             </Link>
           </div>

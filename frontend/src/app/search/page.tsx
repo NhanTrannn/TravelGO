@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import FeaturedDestinations from '@/components/features/FeaturedDestinations'
 import dbConnect from '@/lib/db'
 import Listing from '@/models/Listing'
-import FeaturedDestinations from '@/components/features/FeaturedDestinations'
-import { MapPin, DollarSign, Tag } from 'lucide-react'
+import { DollarSign, MapPin, Tag } from 'lucide-react'
 import Link from 'next/link'
 
 // --- HELPER FUNCTIONS (Giữ nguyên logic xử lý tiếng Việt của bạn) ---
@@ -36,13 +36,13 @@ type PageProps = {
 
 export default async function SearchPage({ searchParams }: PageProps) {
   await dbConnect();
-  
+
   // [FIX] Await searchParams trước khi destructure
   const { location, priceMax, keywords, q } = await searchParams;
 
   // --- BUILD MONGO QUERY (Logic cũ của bạn, rất tốt) ---
   const query: any = {};
-  
+
   if (location) {
     const folded = foldAccents(location);
     query.$or = [
@@ -50,11 +50,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
       { normalizedLocation: { $regex: folded.replace(/\s+/g,'[\s,/-]*'), $options: 'i' } }
     ];
   }
-  
+
   if (priceMax) {
     query.price = { $lte: parseInt(priceMax) };
   }
-  
+
   if (keywords) {
     const folded = foldAccents(keywords);
     const kwRegex = { $regex: keywords, $options: 'i' };
@@ -133,7 +133,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <h1 className="text-3xl font-bold text-gray-800 mb-4">
             Kết quả tìm kiếm 🔍
           </h1>
-          
+
           {/* Show Original Query if NLP extracted params */}
           {(q && (location || priceMax)) && (
             <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
@@ -150,7 +150,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 <span className="font-medium">{location}</span>
               </div>
             )}
-            
+
             {priceMax && (
               <div className="flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full border border-yellow-200">
                 <DollarSign className="h-4 w-4" />
@@ -159,7 +159,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 </span>
               </div>
             )}
-            
+
             {keywords && (
               <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-800 rounded-full border border-purple-200">
                 <Tag className="h-4 w-4" />
@@ -188,7 +188,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             <p className="text-gray-600 mb-6">
               Thử điều chỉnh yêu cầu tìm kiếm hoặc mở rộng phạm vi giá
             </p>
-            <Link 
+            <Link
               href="/"
               className="inline-block px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition shadow-md hover:shadow-lg"
             >
