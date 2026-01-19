@@ -116,6 +116,21 @@ async def root():
     }
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Docker/Kubernetes"""
+    mongodb_status = mongodb_manager.health_check()
+    chromadb_status = vector_store.health_check()
+    overall_status = "healthy" if (mongodb_status and chromadb_status) else "unhealthy"
+    return {
+        "status": overall_status,
+        "service": settings.SERVICE_NAME,
+        "version": settings.SERVICE_VERSION,
+        "mongodb": mongodb_status,
+        "chromadb": chromadb_status,
+    }
+
+
 @app.get("/endpoints", response_class=HTMLResponse)
 async def list_endpoints():
     """Display all available API endpoints in a nice HTML page"""
