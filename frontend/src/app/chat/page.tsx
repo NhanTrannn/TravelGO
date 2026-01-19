@@ -1,11 +1,11 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
-import { Send, Bot, Loader2, ArrowLeft, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
-import ReactMarkdown from "react-markdown"
+import { ArrowLeft, Bot, Loader2, RotateCcw, Send } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
+import ReactMarkdown from "react-markdown"
 
 // Định nghĩa kiểu tin nhắn (copy từ ChatWidget)
 type Hotel = {
@@ -75,14 +75,14 @@ export default function ChatPage() {
     hotels_shown: false,
     selected_hotel: ""
   })
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Load conversation từ localStorage khi mount
   useEffect(() => {
     const savedMessages = localStorage.getItem('chat_messages')
     const savedContext = localStorage.getItem('chat_context')
-    
+
     if (savedMessages) {
       setMessages(JSON.parse(savedMessages))
     } else {
@@ -93,7 +93,7 @@ export default function ChatPage() {
         ui_type: "none"
       }])
     }
-    
+
     if (savedContext) {
       setTravelContext(JSON.parse(savedContext))
     }
@@ -139,7 +139,7 @@ export default function ChatPage() {
   // const handleHotelConfirm = (hotels: Hotel[]) => {
   //   const selectedHotelsList = hotels.filter(h => selectedHotels.has(h.id))
   //   if (selectedHotelsList.length === 0) return
-  //   
+  //
   //   const hotelNames = selectedHotelsList.map(h => h.name).join(", ")
   //   handleSend(`Tôi chọn khách sạn: ${hotelNames}`)
   //   setSelectedHotels(new Set())
@@ -168,9 +168,9 @@ export default function ChatPage() {
       })
       .filter(item => selectedSpots.has(item.spotId))
       .map(item => item.idx)
-    
+
     if (selectedIndices.length === 0) return
-    
+
     handleSend(selectedIndices.join(", "))
     setSelectedSpots(new Set())
   }
@@ -195,7 +195,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           messages: historyForApi,
           context: travelContext
         })
@@ -208,7 +208,7 @@ export default function ChatPage() {
       // Handle SSE streaming response
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-      
+
       let finalReply = "";
       let finalUiType = "none";
       let finalUiData = {};
@@ -218,23 +218,23 @@ export default function ChatPage() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
+
           const chunk = decoder.decode(value, { stream: true });
           const lines = chunk.split('\n');
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
-                
+
                 // Accumulate reply text (keep last non-empty)
                 if (data.reply && data.reply.trim()) {
                   finalReply = data.reply;
                 }
-                
+
                 // Update UI type (NEVER let 'none' overwrite existing type)
                 if (data.ui_type) {
-                  // Only update if we have 'none' and get something better, 
+                  // Only update if we have 'none' and get something better,
                   // OR if we get a non-'none' type (don't let 'none' overwrite)
                   if (finalUiType === 'none' && data.ui_type !== 'none') {
                     finalUiType = data.ui_type;
@@ -243,12 +243,12 @@ export default function ChatPage() {
                   }
                   // If data.ui_type is 'none', keep existing finalUiType
                 }
-                
+
                 // Update UI data (merge, never reset)
                 if (data.ui_data && Object.keys(data.ui_data).length > 0) {
                   finalUiData = { ...finalUiData, ...data.ui_data };
                 }
-                
+
                 // Update context from response
                 if (data.context) {
                   newContext = { ...newContext, ...data.context };
@@ -264,7 +264,7 @@ export default function ChatPage() {
 
       // Stage transition logic
       let newStage = newContext.conversation_stage || "initial";
-      
+
       if (finalUiType === "itinerary_plan" && !newContext.plan_shown) {
         newStage = "plan_shown";
         newContext.plan_shown = true;
@@ -274,27 +274,27 @@ export default function ChatPage() {
       } else if (newContext.selected_hotel) {
         newStage = "hotel_selected";
       }
-      
+
       newContext.conversation_stage = newStage;
-      
+
       setTravelContext(newContext)
       localStorage.setItem('chat_context', JSON.stringify(newContext))
-      
+
       const botMsg: Message = {
         role: "assistant",
         content: finalReply || "Xin lỗi, tôi không thể xử lý yêu cầu này.",
         ui_type: finalUiType as Message["ui_type"],
         ui_data: Object.keys(finalUiData).length > 0 ? finalUiData : undefined
       }
-      
+
       const updatedMessages = [...newMessages, botMsg]
       setMessages(updatedMessages)
       localStorage.setItem('chat_messages', JSON.stringify(updatedMessages))
 
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
+      setMessages(prev => [...prev, {
+        role: "assistant",
         content: "⚠️ Xin lỗi, kết nối tới AI đang gặp sự cố. Vui lòng thử lại.",
         ui_type: "none"
       }])
@@ -321,7 +321,7 @@ export default function ChatPage() {
             ))}
           </div>
         );
-      
+
       case "hotel_cards":
         return (
           <div className="mt-3 space-y-3">
@@ -352,8 +352,8 @@ export default function ChatPage() {
 
                       {/* Ảnh khách sạn - compact */}
                       <div className="w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                        <img 
-                          src={hotel.image} 
+                        <img
+                          src={hotel.image}
                           alt={hotel.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -361,7 +361,7 @@ export default function ChatPage() {
                           }}
                         />
                       </div>
-                      
+
                       {/* Thông tin khách sạn */}
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
@@ -398,7 +398,7 @@ export default function ChatPage() {
                 )
               })}
             </div>
-            
+
             {/* Nút Xác nhận - NOT NEEDED: Hotels auto-submit on click */}
             {/* {selectedHotels.size > 0 && (
               <div className="sticky bottom-0 pt-3 pb-2 bg-gradient-to-t from-gray-50 to-transparent">
@@ -440,7 +440,7 @@ export default function ChatPage() {
                 </div>
               ))}
             </div>
-            
+
             {/* CRITICAL FIX: Add action buttons */}
             {msg.ui_data?.actions && msg.ui_data.actions.length > 0 && (
               <div className="flex flex-wrap gap-2 p-3 pt-2 border-t border-blue-100 bg-blue-50/30">
@@ -469,8 +469,8 @@ export default function ChatPage() {
               >
                 {/* Ảnh địa điểm - compact */}
                 <div className="w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                  <img 
-                    src={spot.image || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800'} 
+                  <img
+                    src={spot.image || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800'}
                     alt={spot.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
@@ -478,7 +478,7 @@ export default function ChatPage() {
                     }}
                   />
                 </div>
-                
+
                 {/* Thông tin địa điểm */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <h4 className="font-bold text-sm text-gray-800 truncate group-hover:text-green-600">
@@ -504,12 +504,12 @@ export default function ChatPage() {
             ))}
           </div>
         );
-      
+
       case "itinerary_builder": {
         const spots = msg.ui_data?.spots || [];
         const currentDay = msg.ui_data?.current_day || 1;
         const totalDays = msg.ui_data?.total_days || 3;
-        
+
         return (
           <div className="mt-3">
             {/* Progress indicator */}
@@ -523,7 +523,7 @@ export default function ChatPage() {
                 </span>
               </div>
               <div className="w-full bg-blue-200 rounded-full h-1.5">
-                <div 
+                <div
                   className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
                   style={{ width: `${(currentDay / totalDays) * 100}%` }}
                 />
@@ -566,12 +566,12 @@ export default function ChatPage() {
                     <div className="w-8 h-8 shrink-0 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center">
                       {spotIdx}
                     </div>
-                    
+
                     {/* Spot image */}
                     <div className="w-14 h-14 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img 
-                        src={spot.image || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800'} 
+                      <img
+                        src={spot.image || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800'}
                         alt={spot.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -579,7 +579,7 @@ export default function ChatPage() {
                         }}
                       />
                     </div>
-                    
+
                     {/* Spot info */}
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <h4 className="font-bold text-sm text-gray-800 truncate">
@@ -616,7 +616,7 @@ export default function ChatPage() {
           </div>
         );
       }
-      
+
       case "tips": {
         const categories = msg.ui_data?.tips_categories || [];
         return (
@@ -638,7 +638,7 @@ export default function ChatPage() {
                 </div>
               ))}
             </div>
-            
+
             {/* Action buttons */}
             {msg.ui_data?.actions && msg.ui_data.actions.length > 0 && (
               <div className="flex flex-wrap gap-2 p-3 pt-2 border-t border-yellow-100 bg-yellow-50/30">
@@ -656,7 +656,7 @@ export default function ChatPage() {
           </div>
         );
       }
-      
+
       default:
         return null;
     }
@@ -715,7 +715,7 @@ export default function ChatPage() {
                     }`}
                   >
                     <div className="prose prose-sm max-w-none">
-                      <ReactMarkdown 
+                      <ReactMarkdown
                         components={{
                           ul: ({...props}) => <ul className="list-disc pl-4 my-2" {...props} />,
                           ol: ({...props}) => <ol className="list-decimal pl-4 my-2" {...props} />,
@@ -733,7 +733,7 @@ export default function ChatPage() {
                 </div>
               </div>
             ))}
-            
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center gap-2 shadow-sm">
@@ -747,20 +747,21 @@ export default function ChatPage() {
 
           {/* Input Area */}
           <div className="p-6 bg-gray-50 border-t border-gray-200">
-            <form 
+            <form
               onSubmit={(e) => { e.preventDefault(); handleSend(); }}
               className="flex gap-3 items-center"
             >
               <Input
+                id="chat-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Hỏi về du lịch..."
                 className="flex-1 h-12 px-4 text-sm"
                 disabled={isLoading}
               />
-              <Button 
-                type="submit" 
-                size="icon" 
+              <Button
+                type="submit"
+                size="icon"
                 className={`h-12 w-12 rounded-full transition-all ${
                   input.trim() ? "bg-blue-600 hover:bg-blue-700 shadow-md" : "bg-gray-300"
                 }`}
