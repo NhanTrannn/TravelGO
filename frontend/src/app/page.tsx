@@ -7,6 +7,9 @@ import NlpSearchBox from "@/components/features/NlpSearchBox";
 import { mapProvinceToCard, mapSpotToCard } from "@/lib/adapters/destinationAdapter";
 import { CardItem } from "@/types/ui";
 
+// Force dynamic rendering for this page (fetches from external API)
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   // Fetch both provinces and spots, then convert to unified CardItem format
   let items: CardItem[] = [];
