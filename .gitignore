@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+.coverage
+htmlcov/
+
+# Docker
+*.tar
+
+# Internal documentation (thesis, reports)
+THESIS_*.md
+TEST_REPORT*.md
+DAILY_REPORT*.md
+DISTANCE_*.md
+LLM_VS_*.md
+*.tex
+*.pdf
+*.aux
+*.out
+*.synctex.gz
+
+# Temp files
+*.tmp
+*.bak
+*.backup*
+
+# Data files (large)
+*.csv.bak
+*.json.bak
+
+# ChromaDB local
+data/chroma/
+
+# Saved models cache
+saved_models/
+*.pt
+*.bin
