@@ -111,6 +111,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
     imageSrc: (listing.imageSrc && listing.imageSrc.trim() !== '') ? listing.imageSrc : PLACEHOLDER_IMG,
   }));
 
+  // Chuyển đổi listings sang CardItem format cho FeaturedDestinations
+  const cardItems = listings.map((listing: any) => ({
+    id: listing.id,
+    type: 'SPOT' as const,
+    title: listing.title || 'Chưa có tên',
+    subtitle: listing.location || 'Chưa có địa chỉ',
+    imageSrc: listing.imageSrc,
+    badge: 'Khách sạn',
+    infoPrimary: listing.price ? `${listing.price.toLocaleString('vi-VN')} VNĐ/đêm` : 'Liên hệ',
+    infoSecondary: listing.rating ? `⭐ ${listing.rating}` : undefined,
+    sourceUrl: listing.sourceUrl,
+    slug: listing.id,
+  }));
+
   return (
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white py-12 px-4">
       <div className="max-w-7xl mx-auto">
@@ -164,7 +178,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
         {/* Render Listings */}
         {listings.length > 0 ? (
-          <FeaturedDestinations listings={listings} />
+          <FeaturedDestinations items={cardItems} title="Kết quả tìm kiếm" subtitle="" />
         ) : (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100">
             <div className="text-6xl mb-4">😢</div>
