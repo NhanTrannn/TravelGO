@@ -17,6 +17,7 @@
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
 - [Quick Start](#-quick-start)
+- [Production Deployment](#️-production-deployment)
 - [API Documentation](#-api-documentation)
 - [Testing Framework](#-testing-framework)
 - [Performance Metrics](#-performance-metrics)
@@ -246,6 +247,143 @@ docker-compose up --build
 # - Frontend: http://localhost:3000
 # - MongoDB: localhost:27017
 ```
+
+---
+
+## ☁️ Production Deployment
+
+### Current Production URLs
+
+| Service | URL | Platform |
+|---------|-----|----------|
+| **Frontend** | https://travel-go-dbmk.vercel.app | Vercel |
+| **Backend API** | http://171.244.139.129:8000 | Viettel VPS |
+
+### Option 1: Viettel VPS Deployment (Backend)
+
+#### Step 1: Server Setup
+
+```bash
+# SSH vào VPS
+ssh user@171.244.139.129
+
+# Cài đặt Docker
+sudo apt update
+sudo apt install docker.io docker-compose -y
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# Thêm user vào docker group
+sudo usermod -aG docker $USER
+```
+
+#### Step 2: Clone & Configure
+
+```bash
+# Clone repository
+git clone https://github.com/NhanTrannn/TravelGO.git
+cd TravelGO/travel-advisor-service
+
+# Tạo file .env
+nano .env
+```
+
+**Cấu hình .env:**
+```env
+# MongoDB Atlas
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/spots_db
+
+# FPT AI LLM
+FPT_API_KEY=your_fpt_api_key
+
+# OpenAI (optional fallback)
+OPENAI_API_KEY=your_openai_key
+
+# Server Config
+HOST=0.0.0.0
+PORT=8000
+```
+
+#### Step 3: Build & Run với Docker
+
+```bash
+# Build image
+docker build -t travel-advisor-backend .
+
+# Run container
+docker run -d \
+  --name travel-backend \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  --env-file .env \
+  travel-advisor-backend
+
+# Kiểm tra logs
+docker logs -f travel-backend
+```
+
+#### Step 4: Verify Deployment
+
+```bash
+# Health check
+curl http://171.244.139.129:8000/health
+
+# Test API
+curl -X POST http://171.244.139.129:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Xin chào"}]}'
+```
+
+### Option 2: Vercel Deployment (Frontend)
+
+Frontend tự động deploy khi push lên `main` branch:
+
+1. Import repository vào Vercel
+2. Configure environment variables:
+   ```
+   NEXT_PUBLIC_API_URL=http://171.244.139.129:8000
+   ```
+3. Deploy
+
+### Update Deployment
+
+```bash
+# SSH vào VPS
+ssh user@171.244.139.129
+
+# Update code
+cd TravelGO
+git pull origin main
+cd travel-advisor-service
+
+# Rebuild container
+docker stop travel-backend
+docker rm travel-backend
+docker build -t travel-advisor-backend .
+docker run -d \
+  --name travel-backend \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  --env-file .env \
+  travel-advisor-backend
+```
+
+### Capacity Analysis
+
+| Resource | Value | Notes |
+|----------|-------|-------|
+| **VPS RAM** | 4 GB | Container uses ~1.2GB |
+| **VPS CPU** | 2 vCPU | Low usage ~0.5% |
+| **MongoDB** | Atlas M0 | Free tier (512MB) |
+| **LLM API** | FPT AI | Rate limit ~10-20 req/s |
+
+**Estimated Concurrent Users:**
+
+| Scenario | Users | Bottleneck |
+|----------|-------|------------|
+| Chat only | 20-30 | LLM API |
+| With caching | 50-100 | VPS RAM |
+| Peak usage | 10-15 | LLM latency |
 
 ---
 
