@@ -368,14 +368,37 @@ Sắp xếp hoạt động ngoài trời vào ngày thời tiết tốt,
         climate_zone = self.get_climate_zone(location)
         best_time_file = self.data_dir / "best_time.json"
 
-        geo_df = read_csv(self.data_dir / "geographical_information.csv")
+        # Map climate zones to Vietnamese region names
+        ZONE_TO_REGION = {
+            "southern": "Đồng Bằng Sông Cửu Long",
+            "northeast": "Đông Bắc Bộ",
+            "northwest": "Tây Bắc Bộ",
+            "red_river_delta": "Đồng Bằng Sông Hồng",
+            "north_central": "Bắc Trung Bộ",
+            "south_central_coast": "Duyên Hải Nam Trung Bộ",
+            "central_highlands": "Tây Nguyên",
+        }
+        
+        # Try to get region from geographical_information.csv, fallback to zone mapping
+        region = None
+        geo_file = self.data_dir / "geographical_information.csv"
+        if geo_file.exists():
+            try:
+                geo_df = read_csv(geo_file)
+                location_to_region = {
+                    row["location"]: row["region"] for _, row in geo_df.iterrows()
+                }
+                region = location_to_region.get(base_location, None)
+            except Exception as e:
+                logging.warning(f"⚠️ Failed to read geographical_information.csv: {e}")
+        
+        # Fallback to zone-based region name
+        if not region:
+            region = ZONE_TO_REGION.get(climate_zone, climate_zone)
+
         with open(best_time_file, "r", encoding="utf-8") as f:
             data = json.load(f)
-        location_to_region = {
-            row["location"]: row["region"] for _, row in geo_df.iterrows()
-        }
-        # Use base_location (mapped province) to get region
-        region = location_to_region.get(base_location, None)
+            
         if climate_zone not in data:
             return {
                 "best_months": [],
