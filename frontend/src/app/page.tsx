@@ -12,7 +12,7 @@ export default async function Home() {
   let items: CardItem[] = [];
   
   try {
-    const PYTHON_BACKEND = 'http://localhost:8001';
+    const PYTHON_BACKEND = process.env.BACKEND_ORIGIN || 'http://localhost:8001';
     
     // Parallel fetch: 3 featured provinces + 6 featured spots
     const [provincesRes, spotsRes] = await Promise.all([
