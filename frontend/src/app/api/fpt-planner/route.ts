@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
-import { NextRequest, NextResponse } from "next/server";
 import csvDB from "@/lib/csvdb";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
@@ -150,19 +150,15 @@ export async function POST(req: NextRequest) {
       // Query database nếu có location
       let dbResults = null;
       if (normalizedCity) {
-        console.log(`� Querying database for: ${normalizedCity}`);
+        console.log(`📍 Querying database for: ${normalizedCity}`);
         try {
-          const listings = await prisma.listing.findMany({
-            where: {
-              OR: [
-                { location: { contains: normalizedCity } },
-                { title: { contains: normalizedCity } },
-                { description: { contains: normalizedCity } }
-              ]
-            },
-            take: 5,
-            orderBy: { price: "asc" }
-          });
+          // Sử dụng csvDB thay vì prisma
+          let listings = csvDB.listing.searchByLocation(normalizedCity);
+
+          // Sắp xếp theo giá và giới hạn 5 kết quả
+          listings = listings
+            .sort((a, b) => a.price - b.price)
+            .slice(0, 5);
 
           if (listings.length > 0) {
             dbResults = listings;
