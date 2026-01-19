@@ -112,6 +112,9 @@ type Message = {
     // Distance Info fields
     hotel?: string
     distances?: Array<{name: string; distance_km: number; address: string; image?: string}>
+    // Month Selector fields
+    best_months?: string[]
+    avoid_months?: string[]
     // Auto-generated itinerary display
     itinerary?: {
       location?: string
@@ -140,6 +143,18 @@ type Message = {
           image?: string
         }>
       }>
+      budget_warning?: {
+        message: string
+        suggestions?: string[]
+      }
+      budget_breakdown?: {
+        accommodation_per_night?: number
+        nights?: number
+        food?: number
+        transport?: number
+        activities?: number
+        total?: number
+      }
     }
   }
 }
@@ -1562,7 +1577,7 @@ const ChatWidget = ({ initialDestination }: ChatWidgetProps = {}) => {
       default: return null;
       }
     } catch (err) {
-      logger.warn(`[renderGenUI] Error rendering ui_type=${msg.ui_type}: ${err}`);
+      console.warn(`[renderGenUI] Error rendering ui_type=${msg.ui_type}: ${err}`);
       return (
         <div className="mt-3 p-2 bg-red-50 border border-red-100 rounded-lg text-[11px] text-red-700">
           ⚠️ Lỗi hiển thị: {String(err)}
