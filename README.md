@@ -254,10 +254,10 @@ docker-compose up --build
 
 ### Current Production URLs
 
-| Service | URL | Platform |
-|---------|-----|----------|
-| **Frontend** | https://travel-go-dbmk.vercel.app | Vercel |
-| **Backend API** | http://171.244.139.129:8000 | Viettel VPS |
+| Service         | URL                               | Platform    |
+| --------------- | --------------------------------- | ----------- |
+| **Frontend**    | https://travel-go-dbmk.vercel.app | Vercel      |
+| **Backend API** | http://171.244.139.129:8000       | Viettel VPS |
 
 ### Option 1: Viettel VPS Deployment (Backend)
 
@@ -289,6 +289,7 @@ nano .env
 ```
 
 **Cấu hình .env:**
+
 ```env
 # MongoDB Atlas
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/spots_db
@@ -370,20 +371,20 @@ docker run -d \
 
 ### Capacity Analysis
 
-| Resource | Value | Notes |
-|----------|-------|-------|
-| **VPS RAM** | 4 GB | Container uses ~1.2GB |
-| **VPS CPU** | 2 vCPU | Low usage ~0.5% |
-| **MongoDB** | Atlas M0 | Free tier (512MB) |
-| **LLM API** | FPT AI | Rate limit ~10-20 req/s |
+| Resource    | Value    | Notes                   |
+| ----------- | -------- | ----------------------- |
+| **VPS RAM** | 4 GB     | Container uses ~1.2GB   |
+| **VPS CPU** | 2 vCPU   | Low usage ~0.5%         |
+| **MongoDB** | Atlas M0 | Free tier (512MB)       |
+| **LLM API** | FPT AI   | Rate limit ~10-20 req/s |
 
 **Estimated Concurrent Users:**
 
-| Scenario | Users | Bottleneck |
-|----------|-------|------------|
-| Chat only | 20-30 | LLM API |
-| With caching | 50-100 | VPS RAM |
-| Peak usage | 10-15 | LLM latency |
+| Scenario     | Users  | Bottleneck  |
+| ------------ | ------ | ----------- |
+| Chat only    | 20-30  | LLM API     |
+| With caching | 50-100 | VPS RAM     |
+| Peak usage   | 10-15  | LLM latency |
 
 ---
 
@@ -736,8 +737,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Contact
 
 **Project Maintainer**: Nhan Tran
-**Email**: your.email@example.com
-**Project Link**: https://github.com/yourusername/travel-advisor-service
+**Email**: traongnhantran2505@gmail.com
+**Project Link**: https://github.com/NhanTrannn/travel-advisor-service
 
 ---
 

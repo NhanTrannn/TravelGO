@@ -378,7 +378,7 @@ Sắp xếp hoạt động ngoài trời vào ngày thời tiết tốt,
             "south_central_coast": "Duyên Hải Nam Trung Bộ",
             "central_highlands": "Tây Nguyên",
         }
-        
+
         # Try to get region from geographical_information.csv, fallback to zone mapping
         region = None
         geo_file = self.data_dir / "geographical_information.csv"
@@ -391,14 +391,14 @@ Sắp xếp hoạt động ngoài trời vào ngày thời tiết tốt,
                 region = location_to_region.get(base_location, None)
             except Exception as e:
                 logging.warning(f"⚠️ Failed to read geographical_information.csv: {e}")
-        
+
         # Fallback to zone-based region name
         if not region:
             region = ZONE_TO_REGION.get(climate_zone, climate_zone)
 
         with open(best_time_file, "r", encoding="utf-8") as f:
             data = json.load(f)
-            
+
         if climate_zone not in data:
             return {
                 "best_months": [],
