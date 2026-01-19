@@ -1,8 +1,8 @@
 // CSV Data Manager - Thay thế Prisma
-import fs from 'fs';
-import path from 'path';
 import { parse } from 'csv-parse/sync';
 import { stringify } from 'csv-stringify/sync';
+import fs from 'fs';
+import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 
@@ -51,22 +51,22 @@ export interface Booking {
 // Helper functions
 function readCSV<T>(filename: string): T[] {
   const filePath = path.join(DATA_DIR, filename);
-  
+
   if (!fs.existsSync(filePath)) {
     return [];
   }
-  
+
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
     if (!content.trim()) return [];
-    
+
     const records = parse(content, {
       columns: true,
       skip_empty_lines: true,
       cast: true,
       cast_date: false,
-    });
-    
+    }) as T[];
+
     return records;
   } catch (error) {
     console.error(`Error reading ${filename}:`, error);
@@ -76,17 +76,17 @@ function readCSV<T>(filename: string): T[] {
 
 function writeCSV<T>(filename: string, data: T[]): void {
   const filePath = path.join(DATA_DIR, filename);
-  
+
   if (data.length === 0) {
     fs.writeFileSync(filePath, '', 'utf-8');
     return;
   }
-  
+
   const csv = stringify(data, {
     header: true,
     quoted: true,
   });
-  
+
   fs.writeFileSync(filePath, csv, 'utf-8');
 }
 
@@ -102,7 +102,7 @@ export const hotels = {
     take?: number;
   }): Hotel[] => {
     let data = readCSV<Hotel>('hotels.csv');
-    
+
     // Apply filters
     if (options?.where) {
       data = data.filter(hotel => {
@@ -112,25 +112,25 @@ export const hotels = {
         });
       });
     }
-    
+
     // Apply sorting
     if (options?.orderBy) {
       const [field, order] = Object.entries(options.orderBy)[0];
       data.sort((a, b) => {
-        const aVal = a[field as keyof Hotel];
-        const bVal = b[field as keyof Hotel];
+        const aVal = a[field as keyof Hotel] ?? 0;
+        const bVal = b[field as keyof Hotel] ?? 0;
         if (order === 'asc') {
           return aVal > bVal ? 1 : -1;
         }
         return aVal < bVal ? 1 : -1;
       });
     }
-    
+
     // Apply limit
     if (options?.take) {
       data = data.slice(0, options.take);
     }
-    
+
     return data;
   },
 
@@ -142,32 +142,32 @@ export const hotels = {
   create: (hotel: Omit<Hotel, 'id' | 'createdAt' | 'updatedAt'>): Hotel => {
     const data = readCSV<Hotel>('hotels.csv');
     const now = new Date().toISOString();
-    
+
     const newHotel: Hotel = {
       ...hotel,
       id: generateId(),
       createdAt: now,
       updatedAt: now,
     };
-    
+
     data.push(newHotel);
     writeCSV('hotels.csv', data);
-    
+
     return newHotel;
   },
 
   update: (where: { id: string }, update: Partial<Hotel>): Hotel | null => {
     const data = readCSV<Hotel>('hotels.csv');
     const index = data.findIndex(h => h.id === where.id);
-    
+
     if (index === -1) return null;
-    
+
     data[index] = {
       ...data[index],
       ...update,
       updatedAt: new Date().toISOString(),
     };
-    
+
     writeCSV('hotels.csv', data);
     return data[index];
   },
@@ -175,13 +175,13 @@ export const hotels = {
   delete: (where: { id: string }): Hotel | null => {
     const data = readCSV<Hotel>('hotels.csv');
     const index = data.findIndex(h => h.id === where.id);
-    
+
     if (index === -1) return null;
-    
+
     const deleted = data[index];
     data.splice(index, 1);
     writeCSV('hotels.csv', data);
-    
+
     return deleted;
   },
 
@@ -189,7 +189,7 @@ export const hotels = {
   searchByLocation: (location: string): Hotel[] => {
     const data = readCSV<Hotel>('hotels.csv');
     const searchTerm = location.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    
+
     return data.filter(hotel => {
       const hotelLocation = hotel.location.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       return hotelLocation.includes(searchTerm);
@@ -207,32 +207,32 @@ export const hotels = {
 export const users = {
   findUnique: (where: { id?: string; email?: string }): User | null => {
     const data = readCSV<User>('users.csv');
-    
+
     if (where.id) {
       return data.find(u => u.id === where.id) || null;
     }
-    
+
     if (where.email) {
       return data.find(u => u.email === where.email) || null;
     }
-    
+
     return null;
   },
 
   create: (user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): User => {
     const data = readCSV<User>('users.csv');
     const now = new Date().toISOString();
-    
+
     const newUser: User = {
       ...user,
       id: generateId(),
       createdAt: now,
       updatedAt: now,
     };
-    
+
     data.push(newUser);
     writeCSV('users.csv', data);
-    
+
     return newUser;
   },
 };
@@ -241,7 +241,7 @@ export const users = {
 export const bookings = {
   findMany: (where?: { userId?: string; listingId?: string }): Booking[] => {
     let data = readCSV<Booking>('bookings.csv');
-    
+
     if (where) {
       data = data.filter(booking => {
         if (where.userId && booking.userId !== where.userId) return false;
@@ -249,7 +249,7 @@ export const bookings = {
         return true;
       });
     }
-    
+
     return data;
   },
 
@@ -260,30 +260,30 @@ export const bookings = {
 
   create: (booking: Omit<Booking, 'id' | 'createdAt'>): Booking => {
     const data = readCSV<Booking>('bookings.csv');
-    
+
     const newBooking: Booking = {
       ...booking,
       id: generateId(),
       createdAt: new Date().toISOString(),
     };
-    
+
     data.push(newBooking);
     writeCSV('bookings.csv', data);
-    
+
     return newBooking;
   },
 
   update: (where: { id: string }, update: Partial<Booking>): Booking | null => {
     const data = readCSV<Booking>('bookings.csv');
     const index = data.findIndex(b => b.id === where.id);
-    
+
     if (index === -1) return null;
-    
+
     data[index] = {
       ...data[index],
       ...update,
     };
-    
+
     writeCSV('bookings.csv', data);
     return data[index];
   },

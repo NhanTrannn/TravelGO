@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "../api/auth/[...nextauth]/route"
 import Image from "next/image"
+import { authOptions } from "../api/auth/[...nextauth]/route"
 
 export default async function TripsPage() {
   const session = await getServerSession(authOptions)
@@ -18,7 +18,7 @@ export default async function TripsPage() {
     <div className="container mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold mb-6">Chuyến đi của tôi</h1>
       <div className="space-y-4">
-        {bookings.map((booking) => (
+        {bookings.map((booking: { id: string; startDate: Date; endDate: Date; totalPrice: number; listing: { imageSrc: string; title: string }; status?: string }) => (
           <div key={booking.id} className="flex border rounded-lg overflow-hidden bg-white shadow-sm">
             <div className="relative w-48 h-32">
               <Image src={booking.listing.imageSrc} alt="img" fill style={{ objectFit: 'cover' }} />
@@ -30,7 +30,7 @@ export default async function TripsPage() {
                 <p className="font-semibold mt-1">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(booking.totalPrice)}</p>
               </div>
               <div className="mr-4">
-                {(booking as unknown as { status?: string }).status === 'PAID' ? (
+                {booking.status === 'PAID' ? (
                   <span className="flex items-center text-green-600 font-bold gap-1 bg-green-50 px-3 py-1 rounded-full">
                     ✓ Đã thanh toán
                   </span>
